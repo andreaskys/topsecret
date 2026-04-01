@@ -1,8 +1,11 @@
 package com.eventhub.api.controller;
 
 import com.eventhub.api.domain.repository.*;
+import com.eventhub.api.dto.request.UpdateRoleRequest;
 import com.eventhub.api.dto.response.UserResponse;
 import com.eventhub.api.exception.BusinessException;
+import com.eventhub.api.service.AuditService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -20,6 +23,7 @@ public class AdminController {
     private final ListingRepository listingRepository;
     private final BookingRepository bookingRepository;
     private final ReviewRepository reviewRepository;
+    private final AuditService auditService;
 
     @GetMapping("/stats")
     public ResponseEntity<Map<String, Object>> getStats() {
@@ -40,7 +44,7 @@ public class AdminController {
                         .email(u.getEmail())
                         .phoneNumber(u.getPhoneNumber())
                         .avatarUrl(u.getAvatarUrl())
-                        .role(u.getRole())
+                        .role(u.getRole().name())
                         .build()
         ));
     }
@@ -48,18 +52,21 @@ public class AdminController {
     @PatchMapping("/users/{id}/role")
     public ResponseEntity<UserResponse> updateRole(
             @PathVariable Long id,
-            @RequestBody Map<String, String> body) {
+            @Valid @RequestBody UpdateRoleRequest request) {
         var user = userRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("User not found"));
-        user.setRole(body.get("role"));
+        String oldRole = user.getRole().name();
+        user.setRole(request.getRole());
         userRepository.save(user);
+        auditService.log("ROLE_CHANGE", "USER", id, null,
+                "Role changed from " + oldRole + " to " + request.getRole().name());
         return ResponseEntity.ok(UserResponse.builder()
                 .id(user.getId())
                 .fullName(user.getFullName())
                 .email(user.getEmail())
                 .phoneNumber(user.getPhoneNumber())
                 .avatarUrl(user.getAvatarUrl())
-                .role(user.getRole())
+                .role(user.getRole().name())
                 .build());
     }
 }

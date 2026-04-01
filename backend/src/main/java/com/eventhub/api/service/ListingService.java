@@ -1,13 +1,15 @@
 package com.eventhub.api.service;
 
 import com.eventhub.api.domain.entity.*;
+import com.eventhub.api.domain.enums.MediaType;
+import com.eventhub.api.domain.enums.TranscodingStatus;
 import com.eventhub.api.domain.repository.ListingRepository;
 import com.eventhub.api.domain.repository.ListingSpecification;
 import com.eventhub.api.domain.repository.UserRepository;
 import com.eventhub.api.dto.request.CreateListingRequest;
 import com.eventhub.api.dto.response.ListingResponse;
 import com.eventhub.api.dto.response.MediaResponse;
-import com.eventhub.api.dto.response.UserResponse;
+import com.eventhub.api.dto.response.PublicUserResponse;
 import com.eventhub.api.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
@@ -31,6 +33,7 @@ public class ListingService {
     private final ListingRepository listingRepository;
     private final UserRepository userRepository;
     private final StorageService storageService;
+    private final TranscodingService transcodingService;
 
     @Cacheable(value = "listings", key = "#pageable.pageNumber + '-' + #pageable.pageSize + '-' + #search + '-' + #minPrice + '-' + #maxPrice + '-' + #minGuests + '-' + #eventType")
     public Page<ListingResponse> findAll(Pageable pageable, String search, BigDecimal minPrice, BigDecimal maxPrice, Integer minGuests, String eventType) {
@@ -94,18 +97,26 @@ public class ListingService {
         if (files != null) {
             files.forEach(file -> {
                 String url = storageService.upload(file);
-                String mediaType = file.getContentType() != null && file.getContentType().startsWith("video")
-                        ? "VIDEO" : "IMAGE";
+                boolean isVideo = file.getContentType() != null && file.getContentType().startsWith("video");
+                MediaType mediaType = isVideo ? MediaType.VIDEO : MediaType.IMAGE;
                 ListingMedia media = ListingMedia.builder()
                         .listing(listing)
                         .url(url)
                         .mediaType(mediaType)
+                        .transcodingStatus(isVideo ? TranscodingStatus.PENDING : TranscodingStatus.READY)
                         .build();
                 listing.getMedia().add(media);
             });
         }
 
-        return toResponse(listingRepository.save(listing));
+        Listing saved = listingRepository.save(listing);
+
+        // Trigger async transcoding for videos
+        saved.getMedia().stream()
+                .filter(m -> MediaType.VIDEO == m.getMediaType() && TranscodingStatus.PENDING == m.getTranscodingStatus())
+                .forEach(m -> transcodingService.processVideo(m.getId()));
+
+        return toResponse(saved);
     }
 
     @Transactional
@@ -139,8 +150,8 @@ public class ListingService {
         if (files != null && !files.isEmpty()) {
             files.forEach(file -> {
                 String url = storageService.upload(file);
-                String mediaType = file.getContentType() != null && file.getContentType().startsWith("video")
-                        ? "VIDEO" : "IMAGE";
+                MediaType mediaType = file.getContentType() != null && file.getContentType().startsWith("video")
+                        ? MediaType.VIDEO : MediaType.IMAGE;
                 ListingMedia media = ListingMedia.builder()
                         .listing(listing)
                         .url(url)
@@ -164,6 +175,7 @@ public class ListingService {
         }
 
         listing.setActive(false);
+        listingRepository.save(listing);
     }
 
     private User findUserByEmail(String email) {
@@ -181,7 +193,8 @@ public class ListingService {
                     .map(m -> MediaResponse.builder()
                             .id(m.getId())
                             .url(m.getUrl())
-                            .mediaType(m.getMediaType())
+                            .mediaType(m.getMediaType().name())
+                            .transcodingStatus(m.getTranscodingStatus().name())
                             .build())
                     .toList()
                 : new ArrayList<>();
@@ -198,13 +211,10 @@ public class ListingService {
                 .eventType(listing.getEventType())
                 .amenities(amenities)
                 .media(media)
-                .owner(UserResponse.builder()
+                .owner(PublicUserResponse.builder()
                         .id(listing.getOwner().getId())
                         .fullName(listing.getOwner().getFullName())
-                        .email(listing.getOwner().getEmail())
-                        .phoneNumber(listing.getOwner().getPhoneNumber())
                         .avatarUrl(listing.getOwner().getAvatarUrl())
-                        .role(listing.getOwner().getRole())
                         .build())
                 .build();
     }

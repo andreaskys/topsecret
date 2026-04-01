@@ -2,6 +2,7 @@ package com.eventhub.api.service;
 
 import com.eventhub.api.domain.entity.Notification;
 import com.eventhub.api.domain.entity.User;
+import com.eventhub.api.domain.enums.NotificationType;
 import com.eventhub.api.domain.repository.NotificationRepository;
 import com.eventhub.api.domain.repository.UserRepository;
 import com.eventhub.api.dto.response.NotificationResponse;
@@ -49,11 +50,11 @@ class NotificationServiceTest {
     void getNotifications_success() {
         Notification n1 = Notification.builder()
                 .id(1L).user(user).title("Booking").message("New booking")
-                .read(false).type("BOOKING").createdAt(LocalDateTime.now())
+                .read(false).type(NotificationType.BOOKING).createdAt(LocalDateTime.now())
                 .build();
         Notification n2 = Notification.builder()
                 .id(2L).user(user).title("Payment").message("Payment received")
-                .read(true).type("PAYMENT").createdAt(LocalDateTime.now())
+                .read(true).type(NotificationType.PAYMENT).createdAt(LocalDateTime.now())
                 .build();
 
         Pageable pageable = PageRequest.of(0, 10);

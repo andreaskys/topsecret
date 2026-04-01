@@ -11,6 +11,6 @@ public class ReviewResponse {
     private Long id;
     private Integer rating;
     private String comment;
-    private UserResponse user;
+    private PublicUserResponse user;
     private LocalDateTime createdAt;
 }

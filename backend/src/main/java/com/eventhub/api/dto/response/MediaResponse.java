@@ -9,4 +9,5 @@ public class MediaResponse {
     private Long id;
     private String url;
     private String mediaType;
+    private String transcodingStatus;
 }

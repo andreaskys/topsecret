@@ -1,5 +1,6 @@
 package com.eventhub.api.domain.entity;
 
+import com.eventhub.api.domain.enums.BookingStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -39,9 +40,10 @@ public class Booking {
     @Column(name = "total_price", nullable = false, precision = 12, scale = 2)
     private BigDecimal totalPrice;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     @Builder.Default
-    private String status = "PENDING";
+    private BookingStatus status = BookingStatus.PENDING;
 
     @Column(columnDefinition = "TEXT")
     private String notes;

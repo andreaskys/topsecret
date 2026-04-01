@@ -7,16 +7,24 @@ export interface User {
   role?: string;
 }
 
+export interface PublicUser {
+  id: number;
+  fullName: string;
+  avatarUrl?: string;
+}
+
 export interface AuthResponse {
-  token: string;
   email: string;
   fullName: string;
+  userId: number;
+  role: string;
 }
 
 export interface Media {
   id: number;
   url: string;
   mediaType: "IMAGE" | "VIDEO";
+  transcodingStatus?: "PENDING" | "PROCESSING" | "READY" | "FAILED";
 }
 
 export interface Listing {
@@ -31,14 +39,14 @@ export interface Listing {
   eventType?: string;
   amenities: string[];
   media: Media[];
-  owner: User;
+  owner: PublicUser;
 }
 
 export interface Review {
   id: number;
   rating: number;
   comment: string;
-  user: User;
+  user: PublicUser;
   createdAt: string;
 }
 
@@ -73,6 +81,22 @@ export interface Notification {
   read: boolean;
   type: string;
   createdAt: string;
+}
+
+export interface Message {
+  id: number;
+  sender: PublicUser;
+  receiver: PublicUser;
+  content: string;
+  read: boolean;
+  createdAt: string;
+}
+
+export interface Conversation {
+  otherUser: PublicUser;
+  lastMessage: string;
+  lastMessageAt: string;
+  unreadCount: number;
 }
 
 export interface PaginatedResponse<T> {

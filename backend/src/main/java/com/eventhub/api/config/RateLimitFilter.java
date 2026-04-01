@@ -4,17 +4,20 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.time.Duration;
 
+@Slf4j
 @Component
+@RequiredArgsConstructor
 public class RateLimitFilter extends OncePerRequestFilter {
 
     @Value("${rate-limit.requests-per-minute:60}")
@@ -23,7 +26,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
     @Value("${rate-limit.auth-requests-per-minute:20}")
     private int authRequestsPerMinute;
 
-    private final Map<String, RateBucket> buckets = new ConcurrentHashMap<>();
+    private final StringRedisTemplate redisTemplate;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -39,10 +42,23 @@ public class RateLimitFilter extends OncePerRequestFilter {
         boolean isAuthEndpoint = uri.startsWith("/api/auth/");
         int limit = isAuthEndpoint ? authRequestsPerMinute : requestsPerMinute;
 
-        String key = clientIp + (isAuthEndpoint ? ":auth" : ":api");
-        RateBucket bucket = buckets.computeIfAbsent(key, k -> new RateBucket());
+        String key = "rate-limit:" + (isAuthEndpoint ? "auth:" : "") + clientIp;
 
-        if (!bucket.tryConsume(limit)) {
+        long currentCount;
+        try {
+            Long count = redisTemplate.opsForValue().increment(key);
+            currentCount = count != null ? count : 1;
+            if (currentCount == 1) {
+                redisTemplate.expire(key, Duration.ofSeconds(60));
+            }
+        } catch (Exception e) {
+            // Fail-open: if Redis is unavailable, allow the request
+            log.warn("Redis unavailable for rate limiting, allowing request: {}", e.getMessage());
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        if (currentCount > limit) {
             response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
             response.setContentType("application/json");
             response.getWriter().write("{\"error\":\"Rate limit exceeded. Try again later.\"}");
@@ -53,38 +69,12 @@ public class RateLimitFilter extends OncePerRequestFilter {
         }
 
         response.setHeader("X-RateLimit-Limit", String.valueOf(limit));
-        response.setHeader("X-RateLimit-Remaining", String.valueOf(Math.max(0, limit - bucket.getCount())));
+        response.setHeader("X-RateLimit-Remaining", String.valueOf(Math.max(0, limit - currentCount)));
 
         filterChain.doFilter(request, response);
     }
 
     private String getClientIp(HttpServletRequest request) {
-        String xff = request.getHeader("X-Forwarded-For");
-        if (xff != null && !xff.isEmpty()) {
-            return xff.split(",")[0].trim();
-        }
         return request.getRemoteAddr();
-    }
-
-    private static class RateBucket {
-        private final AtomicInteger count = new AtomicInteger(0);
-        private volatile long windowStart = System.currentTimeMillis();
-
-        boolean tryConsume(int limit) {
-            long now = System.currentTimeMillis();
-            if (now - windowStart > 60_000) {
-                count.set(0);
-                windowStart = now;
-            }
-            return count.incrementAndGet() <= limit;
-        }
-
-        int getCount() {
-            long now = System.currentTimeMillis();
-            if (now - windowStart > 60_000) {
-                return 0;
-            }
-            return count.get();
-        }
     }
 }

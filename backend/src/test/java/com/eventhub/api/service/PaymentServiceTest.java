@@ -4,6 +4,8 @@ import com.eventhub.api.domain.entity.Booking;
 import com.eventhub.api.domain.entity.Listing;
 import com.eventhub.api.domain.entity.Payment;
 import com.eventhub.api.domain.entity.User;
+import com.eventhub.api.domain.enums.BookingStatus;
+import com.eventhub.api.domain.enums.PaymentStatus;
 import com.eventhub.api.domain.repository.BookingRepository;
 import com.eventhub.api.domain.repository.PaymentRepository;
 import com.eventhub.api.domain.repository.UserRepository;
@@ -40,6 +42,12 @@ class PaymentServiceTest {
     @Mock
     private EventProducer eventProducer;
 
+    @Mock
+    private com.eventhub.api.config.StripeConfig stripeConfig;
+
+    @Mock
+    private AuditService auditService;
+
     @InjectMocks
     private PaymentService paymentService;
 
@@ -66,7 +74,7 @@ class PaymentServiceTest {
         booking = Booking.builder()
                 .id(1L).listing(listing).user(booker)
                 .totalPrice(new BigDecimal("500.00"))
-                .status("PENDING").build();
+                .status(BookingStatus.PENDING).build();
 
         paymentRequest = new PaymentRequest();
         paymentRequest.setBookingId(1L);
@@ -91,7 +99,7 @@ class PaymentServiceTest {
         assertThat(response.getStatus()).isEqualTo("COMPLETED");
         assertThat(response.getAmount()).isEqualByComparingTo(new BigDecimal("500.00"));
         assertThat(response.getTransactionId()).startsWith("TXN-");
-        verify(bookingRepository).save(argThat(b -> "CONFIRMED".equals(b.getStatus())));
+        verify(bookingRepository).save(argThat(b -> BookingStatus.CONFIRMED == b.getStatus()));
         verify(eventProducer).sendNotificationEvent(eq(1L), eq("Pagamento Recebido"), anyString(), eq("PAYMENT"));
     }
 
@@ -108,7 +116,7 @@ class PaymentServiceTest {
 
     @Test
     void processPayment_cancelledBooking_throwsException() {
-        booking.setStatus("CANCELLED");
+        booking.setStatus(BookingStatus.CANCELLED);
         when(userRepository.findByEmail("booker@test.com")).thenReturn(Optional.of(booker));
         when(bookingRepository.findById(1L)).thenReturn(Optional.of(booking));
 
@@ -132,7 +140,7 @@ class PaymentServiceTest {
     void getByBookingId_asBooker_success() {
         Payment payment = Payment.builder()
                 .id(1L).booking(booking).amount(new BigDecimal("500.00"))
-                .status("COMPLETED").paymentMethod("CREDIT_CARD")
+                .status(PaymentStatus.COMPLETED).paymentMethod("CREDIT_CARD")
                 .transactionId("TXN-12345678").build();
 
         when(bookingRepository.findById(1L)).thenReturn(Optional.of(booking));

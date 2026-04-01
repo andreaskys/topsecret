@@ -10,9 +10,11 @@ import java.util.List;
 public class CreateListingRequest {
 
     @NotBlank(message = "Name is required")
+    @Size(max = 200, message = "Name must be at most 200 characters")
     private String name;
 
     @NotBlank(message = "Description is required")
+    @Size(max = 10000, message = "Description must be at most 10000 characters")
     private String description;
 
     @NotNull(message = "Price is required")
@@ -20,6 +22,7 @@ public class CreateListingRequest {
     private BigDecimal price;
 
     @NotBlank(message = "Location is required")
+    @Size(max = 500, message = "Location must be at most 500 characters")
     private String location;
 
     @NotNull(message = "Max guests is required")

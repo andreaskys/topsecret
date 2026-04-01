@@ -20,5 +20,5 @@ public class ListingResponse {
     private String eventType;
     private List<String> amenities;
     private List<MediaResponse> media;
-    private UserResponse owner;
+    private PublicUserResponse owner;
 }

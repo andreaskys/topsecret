@@ -1,6 +1,7 @@
 package com.eventhub.api.controller;
 
 import com.eventhub.api.dto.request.PaymentRequest;
+import com.eventhub.api.dto.response.PaymentIntentResponse;
 import com.eventhub.api.dto.response.PaymentResponse;
 import com.eventhub.api.service.PaymentService;
 import jakarta.validation.Valid;
@@ -18,6 +19,31 @@ public class PaymentController {
 
     private final PaymentService paymentService;
 
+    /**
+     * Creates a Stripe PaymentIntent and returns client secret for frontend.
+     */
+    @PostMapping("/create-intent")
+    public ResponseEntity<PaymentIntentResponse> createPaymentIntent(
+            @Valid @RequestBody PaymentRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(paymentService.createPaymentIntent(request, userDetails.getUsername()));
+    }
+
+    /**
+     * Stripe webhook handler — receives payment events.
+     */
+    @PostMapping("/webhook")
+    public ResponseEntity<String> handleWebhook(
+            @RequestBody String payload,
+            @RequestHeader("Stripe-Signature") String sigHeader) {
+        paymentService.handleWebhook(payload, sigHeader);
+        return ResponseEntity.ok("OK");
+    }
+
+    /**
+     * Fallback: direct payment processing (simulated, for dev/testing).
+     */
     @PostMapping
     public ResponseEntity<PaymentResponse> processPayment(
             @Valid @RequestBody PaymentRequest request,

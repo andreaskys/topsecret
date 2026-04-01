@@ -50,7 +50,7 @@ public class UserController {
                 .email(user.getEmail())
                 .phoneNumber(user.getPhoneNumber())
                 .avatarUrl(user.getAvatarUrl())
-                .role(user.getRole())
+                .role(user.getRole().name())
                 .build();
     }
 }

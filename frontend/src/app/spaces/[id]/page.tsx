@@ -9,6 +9,7 @@ import { Listing, Review, PaginatedResponse } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
+import { AvailabilityCalendar } from "@/components/listing/AvailabilityCalendar";
 
 export default function SpaceDetailPage() {
   const { id } = useParams();
@@ -274,7 +275,6 @@ export default function SpaceDetailPage() {
                   </div>
                   <div>
                     <p className="font-medium text-gray-900">{listing.owner.fullName}</p>
-                    <p className="text-sm text-gray-500">{listing.owner.email}</p>
                   </div>
                 </div>
               </div>
@@ -413,26 +413,21 @@ export default function SpaceDetailPage() {
                     )}
                   </div>
 
-                  <div className="border-t border-gray-100 pt-4">
-                    <p className="text-xs text-gray-500 mb-3">Entre em contato com o anunciante</p>
-                    <a
-                      href={`mailto:${listing.owner.email}`}
-                      className="block w-full text-center bg-gray-900 text-white py-3 rounded-xl text-sm font-medium hover:bg-gray-800 transition-colors"
-                    >
-                      Enviar Mensagem
-                    </a>
-                    {listing.owner.phoneNumber && (
+                  {user && (
+                    <div className="border-t border-gray-100 pt-4">
+                      <p className="text-xs text-gray-500 mb-3">Entre em contato com o anunciante</p>
                       <a
-                        href={`https://wa.me/55${listing.owner.phoneNumber.replace(/\D/g, "")}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block w-full text-center mt-2 border border-gray-200 text-gray-700 py-3 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors"
+                        href={`/messages?userId=${listing.owner.id}`}
+                        className="block w-full text-center bg-gray-900 text-white py-3 rounded-xl text-sm font-medium hover:bg-gray-800 transition-colors"
                       >
-                        WhatsApp
+                        Enviar Mensagem
                       </a>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
+
+                {/* Availability Calendar */}
+                <AvailabilityCalendar listingId={Number(id)} />
 
                 {/* Booking Card */}
                 {user && !bookingSuccess && (

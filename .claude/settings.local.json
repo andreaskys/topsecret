@@ -3,7 +3,16 @@
     "allow": [
       "Bash(mvn:*)",
       "Bash(java -version:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(where mvn:*)",
+      "Bash(where:*)",
+      "Bash(cmd /c \"cd /d C:\\\\Users\\\\andreas\\\\Documents\\\\topsecret\\\\backend && mvnw.cmd compile -q 2>&1\")",
+      "Bash(dir:*)",
+      "Bash(cmd.exe /c \"cd C:\\\\Users\\\\andreas\\\\Documents\\\\topsecret\\\\backend && mvn compile -q\")",
+      "Bash(powershell.exe -Command \"cd ''C:\\\\Users\\\\andreas\\\\Documents\\\\topsecret\\\\backend''; mvn compile -q 2>&1\")",
+      "Bash(powershell.exe -Command \"cd ''C:\\\\Users\\\\andreas\\\\Documents\\\\topsecret\\\\backend''; & ''C:\\\\Users\\\\andreas\\\\.sdkman\\\\candidates\\\\maven\\\\current\\\\bin\\\\mvn.cmd'' compile -q 2>&1\")",
+      "Bash(powershell.exe -Command \"Get-Command mvn* -ErrorAction SilentlyContinue | Select-Object Source; where.exe mvn 2>&1; dir env:MAVEN_HOME -ErrorAction SilentlyContinue; dir env:M2_HOME -ErrorAction SilentlyContinue\")",
+      "Bash(powershell.exe:*)"
     ]
   }
 }

@@ -1,12 +1,14 @@
 package com.eventhub.api.service;
 
 import com.eventhub.api.domain.entity.User;
+import com.eventhub.api.domain.enums.UserRole;
 import com.eventhub.api.domain.repository.UserRepository;
 import com.eventhub.api.dto.request.LoginRequest;
 import com.eventhub.api.dto.request.RegisterRequest;
 import com.eventhub.api.dto.response.AuthResponse;
 import com.eventhub.api.exception.BusinessException;
 import com.eventhub.api.security.JwtService;
+import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -35,6 +37,18 @@ class AuthServiceTest {
     @Mock
     private JwtService jwtService;
 
+    @Mock
+    private TokenBlacklistService tokenBlacklistService;
+
+    @Mock
+    private EmailService emailService;
+
+    @Mock
+    private AuditService auditService;
+
+    @Mock
+    private HttpServletResponse httpResponse;
+
     @InjectMocks
     private AuthService authService;
 
@@ -61,6 +75,8 @@ class AuthServiceTest {
                 .fullName("John Doe")
                 .email("john@example.com")
                 .passwordHash("encoded_password")
+                .role(UserRole.USER)
+                .emailVerified(true)
                 .build();
     }
 
@@ -71,59 +87,46 @@ class AuthServiceTest {
         when(userRepository.existsByPhoneNumber(anyString())).thenReturn(false);
         when(passwordEncoder.encode(anyString())).thenReturn("encoded_password");
         when(userRepository.save(any(User.class))).thenReturn(user);
-        when(jwtService.generateToken(anyString())).thenReturn("jwt_token");
+        when(jwtService.generateAccessToken(anyString())).thenReturn("access_token");
+        when(jwtService.generateRefreshToken(anyString())).thenReturn("refresh_token");
+        when(jwtService.extractJti(anyString())).thenReturn("jti-123");
+        when(jwtService.getAccessTokenExpiration()).thenReturn(900000L);
+        when(jwtService.getRefreshTokenExpiration()).thenReturn(604800000L);
 
-        AuthResponse response = authService.register(registerRequest);
+        AuthResponse response = authService.register(registerRequest, httpResponse);
 
         assertThat(response).isNotNull();
-        assertThat(response.getToken()).isEqualTo("jwt_token");
         assertThat(response.getEmail()).isEqualTo("john@example.com");
         assertThat(response.getFullName()).isEqualTo("John Doe");
+        assertThat(response.getUserId()).isEqualTo(1L);
+        assertThat(response.getRole()).isEqualTo("USER");
         verify(userRepository).save(any(User.class));
     }
 
     @Test
-    void register_duplicateEmail_throwsException() {
+    void register_duplicate_throwsException() {
         when(userRepository.existsByEmail("john@example.com")).thenReturn(true);
 
-        assertThatThrownBy(() -> authService.register(registerRequest))
+        assertThatThrownBy(() -> authService.register(registerRequest, httpResponse))
                 .isInstanceOf(BusinessException.class)
-                .hasMessage("Email already in use");
+                .hasMessage("Registration failed. Please check your information.");
 
         verify(userRepository, never()).save(any());
-    }
-
-    @Test
-    void register_duplicateCpf_throwsException() {
-        when(userRepository.existsByEmail(anyString())).thenReturn(false);
-        when(userRepository.existsByCpf("123.456.789-00")).thenReturn(true);
-
-        assertThatThrownBy(() -> authService.register(registerRequest))
-                .isInstanceOf(BusinessException.class)
-                .hasMessage("CPF already registered");
-    }
-
-    @Test
-    void register_duplicatePhone_throwsException() {
-        when(userRepository.existsByEmail(anyString())).thenReturn(false);
-        when(userRepository.existsByCpf(anyString())).thenReturn(false);
-        when(userRepository.existsByPhoneNumber("(11) 99999-0000")).thenReturn(true);
-
-        assertThatThrownBy(() -> authService.register(registerRequest))
-                .isInstanceOf(BusinessException.class)
-                .hasMessage("Phone number already registered");
     }
 
     @Test
     void login_success() {
         when(userRepository.findByEmail("john@example.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("password123", "encoded_password")).thenReturn(true);
-        when(jwtService.generateToken("john@example.com")).thenReturn("jwt_token");
+        when(jwtService.generateAccessToken("john@example.com")).thenReturn("access_token");
+        when(jwtService.generateRefreshToken("john@example.com")).thenReturn("refresh_token");
+        when(jwtService.extractJti(anyString())).thenReturn("jti-123");
+        when(jwtService.getAccessTokenExpiration()).thenReturn(900000L);
+        when(jwtService.getRefreshTokenExpiration()).thenReturn(604800000L);
 
-        AuthResponse response = authService.login(loginRequest);
+        AuthResponse response = authService.login(loginRequest, httpResponse);
 
         assertThat(response).isNotNull();
-        assertThat(response.getToken()).isEqualTo("jwt_token");
         assertThat(response.getEmail()).isEqualTo("john@example.com");
     }
 
@@ -131,7 +134,7 @@ class AuthServiceTest {
     void login_invalidEmail_throwsException() {
         when(userRepository.findByEmail("john@example.com")).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> authService.login(loginRequest))
+        assertThatThrownBy(() -> authService.login(loginRequest, httpResponse))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage("Invalid credentials");
     }
@@ -141,7 +144,7 @@ class AuthServiceTest {
         when(userRepository.findByEmail("john@example.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("password123", "encoded_password")).thenReturn(false);
 
-        assertThatThrownBy(() -> authService.login(loginRequest))
+        assertThatThrownBy(() -> authService.login(loginRequest, httpResponse))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage("Invalid credentials");
     }

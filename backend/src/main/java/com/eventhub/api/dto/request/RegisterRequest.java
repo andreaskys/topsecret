@@ -1,5 +1,6 @@
 package com.eventhub.api.dto.request;
 
+import com.eventhub.api.validation.ValidCpf;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 
@@ -21,7 +22,7 @@ public class RegisterRequest {
     private String birthDate;
 
     @NotBlank(message = "CPF is required")
-    @Pattern(regexp = "\\d{3}\\.?\\d{3}\\.?\\d{3}-?\\d{2}", message = "Invalid CPF format")
+    @ValidCpf(message = "Invalid CPF")
     private String cpf;
 
     @NotBlank(message = "Phone number is required")

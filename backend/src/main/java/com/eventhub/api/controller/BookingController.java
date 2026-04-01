@@ -13,6 +13,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -44,6 +46,11 @@ public class BookingController {
             @AuthenticationPrincipal UserDetails userDetails,
             Pageable pageable) {
         return ResponseEntity.ok(bookingService.getBookingsForListing(listingId, userDetails.getUsername(), pageable));
+    }
+
+    @GetMapping("/listings/{listingId}/dates")
+    public ResponseEntity<List<LocalDate>> getBookedDates(@PathVariable Long listingId) {
+        return ResponseEntity.ok(bookingService.getBookedDates(listingId));
     }
 
     @PatchMapping("/{bookingId}/status")

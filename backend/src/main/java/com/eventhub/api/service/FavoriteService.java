@@ -8,7 +8,7 @@ import com.eventhub.api.domain.repository.ListingRepository;
 import com.eventhub.api.domain.repository.UserRepository;
 import com.eventhub.api.dto.response.ListingResponse;
 import com.eventhub.api.dto.response.MediaResponse;
-import com.eventhub.api.dto.response.UserResponse;
+import com.eventhub.api.dto.response.PublicUserResponse;
 import com.eventhub.api.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -63,7 +63,7 @@ public class FavoriteService {
 
         List<MediaResponse> media = listing.getMedia() != null
                 ? listing.getMedia().stream()
-                    .map(m -> MediaResponse.builder().id(m.getId()).url(m.getUrl()).mediaType(m.getMediaType()).build())
+                    .map(m -> MediaResponse.builder().id(m.getId()).url(m.getUrl()).mediaType(m.getMediaType().name()).build())
                     .toList()
                 : new ArrayList<>();
 
@@ -79,13 +79,10 @@ public class FavoriteService {
                 .eventType(listing.getEventType())
                 .amenities(amenities)
                 .media(media)
-                .owner(UserResponse.builder()
+                .owner(PublicUserResponse.builder()
                         .id(listing.getOwner().getId())
                         .fullName(listing.getOwner().getFullName())
-                        .email(listing.getOwner().getEmail())
-                        .phoneNumber(listing.getOwner().getPhoneNumber())
                         .avatarUrl(listing.getOwner().getAvatarUrl())
-                        .role(listing.getOwner().getRole())
                         .build())
                 .build();
     }

@@ -3,6 +3,7 @@ package com.eventhub.api.service;
 import com.eventhub.api.config.KafkaConfig;
 import com.eventhub.api.domain.entity.Notification;
 import com.eventhub.api.domain.entity.User;
+import com.eventhub.api.domain.enums.NotificationType;
 import com.eventhub.api.domain.repository.NotificationRepository;
 import com.eventhub.api.domain.repository.UserRepository;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -24,6 +25,7 @@ public class NotificationConsumer {
     private final UserRepository userRepository;
     private final SimpMessagingTemplate messagingTemplate;
     private final ObjectMapper objectMapper;
+    private final EmailService emailService;
 
     @KafkaListener(topics = KafkaConfig.TOPIC_NOTIFICATION_EVENTS, groupId = "eventhub-notifications")
     public void handleNotificationEvent(String message) {
@@ -41,10 +43,11 @@ public class NotificationConsumer {
                     .user(user)
                     .title(title)
                     .message(body)
-                    .type(type)
+                    .type(NotificationType.valueOf(type))
                     .build();
             notificationRepository.save(notification);
 
+            // WebSocket broadcast
             messagingTemplate.convertAndSend("/topic/notifications/" + userId,
                     objectMapper.writeValueAsString(Map.of(
                             "id", notification.getId(),
@@ -53,7 +56,10 @@ public class NotificationConsumer {
                             "type", type
                     )));
 
-            log.info("Notification saved and sent via WebSocket to user {}: {}", userId, title);
+            // Email notification
+            emailService.sendNotificationEmail(user.getEmail(), title, body);
+
+            log.info("Notification saved, sent via WebSocket and email to user {}: {}", userId, title);
         } catch (Exception e) {
             log.error("Failed to process notification event: {}", e.getMessage());
         }

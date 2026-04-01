@@ -3,6 +3,7 @@ package com.eventhub.api.service;
 import com.eventhub.api.domain.entity.Booking;
 import com.eventhub.api.domain.entity.Listing;
 import com.eventhub.api.domain.entity.User;
+import com.eventhub.api.domain.enums.BookingStatus;
 import com.eventhub.api.domain.repository.BookingRepository;
 import com.eventhub.api.domain.repository.ListingRepository;
 import com.eventhub.api.domain.repository.UserRepository;
@@ -40,6 +41,9 @@ class BookingServiceTest {
     @Mock
     private EventProducer eventProducer;
 
+    @Mock
+    private AuditService auditService;
+
     @InjectMocks
     private BookingService bookingService;
 
@@ -73,7 +77,7 @@ class BookingServiceTest {
     void create_success() {
         when(userRepository.findByEmail("booker@test.com")).thenReturn(Optional.of(booker));
         when(listingRepository.findById(10L)).thenReturn(Optional.of(listing));
-        when(bookingRepository.existsByListingIdAndEventDateAndStatusNot(eq(10L), any(), eq("CANCELLED")))
+        when(bookingRepository.existsByListingIdAndEventDateAndStatusNot(eq(10L), any(), eq(BookingStatus.CANCELLED)))
                 .thenReturn(false);
         when(bookingRepository.save(any(Booking.class))).thenAnswer(inv -> {
             Booking b = inv.getArgument(0);
@@ -117,7 +121,7 @@ class BookingServiceTest {
     void create_dateAlreadyBooked_throwsException() {
         when(userRepository.findByEmail("booker@test.com")).thenReturn(Optional.of(booker));
         when(listingRepository.findById(10L)).thenReturn(Optional.of(listing));
-        when(bookingRepository.existsByListingIdAndEventDateAndStatusNot(eq(10L), any(), eq("CANCELLED")))
+        when(bookingRepository.existsByListingIdAndEventDateAndStatusNot(eq(10L), any(), eq(BookingStatus.CANCELLED)))
                 .thenReturn(true);
 
         assertThatThrownBy(() -> bookingService.create(10L, bookingRequest, "booker@test.com"))
@@ -139,7 +143,7 @@ class BookingServiceTest {
     void updateStatus_cancelByBooker_success() {
         Booking booking = Booking.builder()
                 .id(1L).listing(listing).user(booker)
-                .status("PENDING").eventDate(LocalDate.now().plusDays(7))
+                .status(BookingStatus.PENDING).eventDate(LocalDate.now().plusDays(7))
                 .guestCount(50).totalPrice(new BigDecimal("500.00"))
                 .build();
 
@@ -156,7 +160,7 @@ class BookingServiceTest {
     void updateStatus_confirmByNonOwner_throwsException() {
         Booking booking = Booking.builder()
                 .id(1L).listing(listing).user(booker)
-                .status("PENDING").eventDate(LocalDate.now().plusDays(7))
+                .status(BookingStatus.PENDING).eventDate(LocalDate.now().plusDays(7))
                 .guestCount(50).totalPrice(new BigDecimal("500.00"))
                 .build();
 
@@ -171,7 +175,7 @@ class BookingServiceTest {
     void updateStatus_unauthorizedUser_throwsException() {
         Booking booking = Booking.builder()
                 .id(1L).listing(listing).user(booker)
-                .status("PENDING").eventDate(LocalDate.now().plusDays(7))
+                .status(BookingStatus.PENDING).eventDate(LocalDate.now().plusDays(7))
                 .guestCount(50).totalPrice(new BigDecimal("500.00"))
                 .build();
 

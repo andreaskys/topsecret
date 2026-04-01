@@ -1,5 +1,7 @@
 package com.eventhub.api.domain.entity;
 
+import com.eventhub.api.domain.enums.MediaType;
+import com.eventhub.api.domain.enums.TranscodingStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -26,8 +28,14 @@ public class ListingMedia {
     @Column(nullable = false, length = 1000)
     private String url;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "media_type", nullable = false, length = 10)
-    private String mediaType;
+    private MediaType mediaType;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "transcoding_status", length = 20)
+    @Builder.Default
+    private TranscodingStatus transcodingStatus = TranscodingStatus.READY;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

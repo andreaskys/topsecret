@@ -1,5 +1,6 @@
 package com.eventhub.api.domain.entity;
 
+import com.eventhub.api.domain.enums.NotificationType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -33,8 +34,9 @@ public class Notification {
     @Builder.Default
     private Boolean read = false;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
-    private String type;
+    private NotificationType type;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

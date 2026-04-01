@@ -27,7 +27,7 @@ public class NotificationService {
                         .title(n.getTitle())
                         .message(n.getMessage())
                         .read(n.getRead())
-                        .type(n.getType())
+                        .type(n.getType().name())
                         .createdAt(n.getCreatedAt())
                         .build());
     }

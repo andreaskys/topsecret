@@ -22,8 +22,8 @@ export function useWebSocket(onNotification?: (notification: Notification) => vo
   const connect = useCallback(() => {
     if (!user || clientRef.current?.active) return;
 
-    const userId = getUserIdFromStorage();
-    if (!userId) return;
+    const userEmail = user.email;
+    if (!userEmail) return;
 
     const client = new Client({
       webSocketFactory: () => new SockJS(WS_URL),
@@ -32,7 +32,7 @@ export function useWebSocket(onNotification?: (notification: Notification) => vo
       heartbeatOutgoing: 10000,
       onConnect: () => {
         setConnected(true);
-        client.subscribe(`/topic/notifications/${userId}`, (message) => {
+        client.subscribe(`/topic/notifications/${userEmail}`, (message) => {
           try {
             const notification = JSON.parse(message.body) as Notification;
             setUnreadCount((prev) => prev + 1);
@@ -74,15 +74,4 @@ export function useWebSocket(onNotification?: (notification: Notification) => vo
   }, [connect, disconnect]);
 
   return { connected, unreadCount, resetUnreadCount, disconnect };
-}
-
-function getUserIdFromStorage(): string | null {
-  try {
-    const token = localStorage.getItem("token");
-    if (!token) return null;
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    return payload.sub || payload.email || null;
-  } catch {
-    return null;
-  }
 }

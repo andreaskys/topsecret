@@ -1,5 +1,6 @@
 package com.eventhub.api.domain.entity;
 
+import com.eventhub.api.domain.enums.PaymentStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -28,9 +29,10 @@ public class Payment {
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal amount;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     @Builder.Default
-    private String status = "PENDING";
+    private PaymentStatus status = PaymentStatus.PENDING;
 
     @Column(name = "payment_method", length = 50)
     private String paymentMethod;

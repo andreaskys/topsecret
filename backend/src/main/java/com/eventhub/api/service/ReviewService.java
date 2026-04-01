@@ -8,7 +8,7 @@ import com.eventhub.api.domain.repository.ReviewRepository;
 import com.eventhub.api.domain.repository.UserRepository;
 import com.eventhub.api.dto.request.CreateReviewRequest;
 import com.eventhub.api.dto.response.ReviewResponse;
-import com.eventhub.api.dto.response.UserResponse;
+import com.eventhub.api.dto.response.PublicUserResponse;
 import com.eventhub.api.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -74,11 +74,10 @@ public class ReviewService {
                 .rating(review.getRating())
                 .comment(review.getComment())
                 .createdAt(review.getCreatedAt())
-                .user(UserResponse.builder()
+                .user(PublicUserResponse.builder()
                         .id(review.getUser().getId())
                         .fullName(review.getUser().getFullName())
-                        .email(review.getUser().getEmail())
-                        .phoneNumber(review.getUser().getPhoneNumber())
+                        .avatarUrl(review.getUser().getAvatarUrl())
                         .build())
                 .build();
     }
